@@ -17,6 +17,9 @@ const logger = createLogger({
 });
 
 // ==================== PROMETHEUS METRICS SETUP ====================
+// Clear the registry to avoid duplicate metric registration
+client.register.clear();
+
 const collectDefaultMetrics = client.collectDefaultMetrics;
 collectDefaultMetrics({register: client.register});
 
@@ -30,13 +33,40 @@ const reqResTime = new client.Histogram({
 const totalreq = new client.Counter({
   name: 'http_requests_total',
   help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status_code']
 });
 
 // ==================== METRICS MIDDLEWARE ====================
-const metricsMiddleware = responseTime((req, res, time) => {
-  totalreq.inc();
-  reqResTime.labels(req.method, req.path, res.statusCode).observe(time / 1000);
-});
+const metricsMiddleware = (req, res, next) => {
+  const start = Date.now();
+  
+  // Capture the original end function
+  const originalEnd = res.end;
+  
+  // Override the end function
+  res.end = function(...args) {
+    // Calculate duration
+    const duration = (Date.now() - start) / 1000; // in seconds
+    
+    const method = req.method;
+    const route = req.path;
+    const statusCode = res.statusCode;
+    
+    console.log(`Recording metrics: ${method} ${route} ${statusCode} - ${duration}s`);
+    
+    // Record metrics
+    totalreq.labels(method, route, statusCode).inc();
+    reqResTime.labels(method, route, statusCode).observe(duration);
+    
+    // Log the request
+    logger.info(`${method} ${route} ${statusCode} - ${(duration * 1000).toFixed(2)}ms`);
+    
+    // Call the original end function
+    originalEnd.apply(res, args);
+  };
+  
+  next();
+};
 
 export {
   logger,
