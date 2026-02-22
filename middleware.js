@@ -1,6 +1,6 @@
 import client from 'prom-client';
 import responseTime from 'response-time';
-import { createLogger, transports } from 'winston';
+import { createLogger } from 'winston';
 import LokiTransport from 'winston-loki';
 import dotenv from 'dotenv';
 
