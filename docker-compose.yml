@@ -7,6 +7,7 @@ volumes:
   prometheus-data:
   grafana-data:
   loki-data:
+  promtail-positions:
 
 services:
   node-app:
@@ -36,8 +37,8 @@ services:
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/etc/grafana/dashboards
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - monitoring
@@ -60,5 +61,8 @@ services:
       - ./promtail-config.yml:/etc/promtail/promtail-config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-positions:/var/lib/promtail
     networks:
       - monitoring
+    depends_on:
+      - loki
